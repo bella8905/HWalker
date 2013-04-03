@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
+import android.R.bool;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -18,6 +19,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.DialogFragment;
@@ -27,10 +29,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,7 +40,7 @@ public class CalculationMain extends FragmentActivity{
 	//bluetooth
 	//ListView listView;
 	private BluetoothAdapter BTAdapter; 
-	protected int BT_ENABLE_RETURN = 2;
+	protected int BT_ENABLE_RETURN = 4;
 	
 	ArrayAdapter<String> listAdapter;
 	Set<BluetoothDevice> devicesArray;
@@ -55,16 +54,20 @@ public class CalculationMain extends FragmentActivity{
 
 	protected static final int SUCCESS_CONNECT = 0;
 	protected static final int MESSAGE_READ = 1;
+	protected static final int CONNECTION_LOST = 2;
+	protected static final int CONNECT_FAIL = 3;
 	
 	ConnectedThread connectedThread;
 	ConnectThread connect;
+	
+	boolean isConnected = false;
+	boolean isAppFinish = false;
 	
 	//test bluetooth
 	TextView tv_contentTime;
 	
 	AlertDialog bTListDialog;
-	
-	
+		
     Handler mHandler = new Handler()
     {
     	public void handleMessage(Message message)
@@ -74,29 +77,36 @@ public class CalculationMain extends FragmentActivity{
     		switch(message.what)
     		{
     		case SUCCESS_CONNECT:
-    			//Log.d(tag, "start connect");
+    			Log.d(tag, "HANDLE, start connect");
     			connectedThread = new ConnectedThread((BluetoothSocket)message.obj);
     			String s = "successfully connected";
     			connectedThread.write(s.getBytes());
-    			//Log.d(tag, "connected");
-    			
+
     			//dismiss the search list dialog
     			bTListDialog.dismiss();
-    			Toast.makeText(getApplicationContext(), "connected", 0).show();
+    			Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_SHORT).show();
+    			isConnected = true;
     			connectedThread.start();
     			break;
     		case MESSAGE_READ:
     			byte[] readBuf = (byte[])message.obj;
     			String string = new String(readBuf);
     			//Toast.makeText(getApplicationContext(), string, 0).show();
-    			Log.d(tag, "read");
+    			Log.d(tag, "HANDLE, read");
     			tv_contentTime.setText(string);
+    			break;
+    		case CONNECTION_LOST: 
+    			Log.d(tag, "HANDLE, connection lost");
+    			isConnected = false;
+    			showAlertDialog("Lost connection. Do you want to reconnect?");  
+    		case CONNECT_FAIL: 
+    			Log.d(tag, "HANDLE, connec fail");
+    			Toast.makeText(getApplicationContext(), "connect fail, try again or cancel", Toast.LENGTH_SHORT).show();
     			break;
     		}
     	}
     };
-	
-	
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,19 +114,26 @@ public class CalculationMain extends FragmentActivity{
         
         tv_contentTime = (TextView)findViewById(R.id.content_time);
         
-        initBluetoth();
-        
+        initBluetoth();        
     }
 
     private void startBTSearch() {
 		// TODO Auto-generated method stub
 		//clear data first
-		pairedDevices.clear();
-		listAdapter.clear();
-		getPairedBluetooth();
-		startDiscovery();
-		
-		showBTListDialog();
+    	
+    	if(!isConnected)
+    	{
+    		pairedDevices.clear();
+    		listAdapter.clear();
+    		getPairedBluetooth();
+    		startDiscovery();
+    		
+    		showBTListDialog();
+    		
+    		return;
+    	}
+ 
+		showAlertDialog("Bluetooth is connected to one device, do you want to disconnet it and reconnect?");
 	}
 
 	private void initBluetoth() {
@@ -166,12 +183,13 @@ public class CalculationMain extends FragmentActivity{
     		    
     		    else if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(action))
     		    {
-    		    	//when you run the app, someone turn off the bt
-    		    	if(BTAdapter.getState() == BluetoothAdapter.STATE_OFF)
-    		    	{
-    		    		//Log.d(tag, "bluetooth turned off");
-    		    		turnOnBT();
-    		    	}   		    		
+//    		    	//when you run the app, someone turn off the bt
+//    		    	if(BTAdapter.getState() == BluetoothAdapter.STATE_OFF)
+//    		    	{
+//    		    		//Log.d(tag, "bluetooth turned off");
+//    		    		isConnected = false;
+//    		    		turnOnBT();
+//    		    	}   		    		
     		    }
 		    }
 		};
@@ -193,7 +211,10 @@ public class CalculationMain extends FragmentActivity{
 		unregisterReceiver(receiver);
 		//shup down the connection
 		if(connectedThread != null)
+		{
+			isAppFinish = true;
 			connectedThread.cancel();
+		}
 	}
     
 	@Override
@@ -218,8 +239,8 @@ public class CalculationMain extends FragmentActivity{
     			turnOnBT();
     			//Log.d("bluetoothTest", "3");
     		}
-    		
-    		startBTSearch();
+    		else
+    			startBTSearch();
 		}
     }
     
@@ -269,7 +290,8 @@ public class CalculationMain extends FragmentActivity{
     	
     }
 
-
+    
+    
 	public static class BTErrorDialogFragment extends DialogFragment {
 	    String m_message;
 
@@ -337,7 +359,7 @@ public class CalculationMain extends FragmentActivity{
 				
 				//Log.d(tag, "paired device is selected");
 				BluetoothDevice selectedDevice = devices.get(which);
-				Toast.makeText(getApplicationContext(), selectedDevice.getName() + " is selected" , Toast.LENGTH_LONG).show();
+				Toast.makeText(getApplicationContext(), selectedDevice.getName() + " is selected" , Toast.LENGTH_SHORT).show();
 				connect = new ConnectThread(selectedDevice);
 				connect.start();
 	
@@ -347,6 +369,41 @@ public class CalculationMain extends FragmentActivity{
 		.setNegativeButton("Cancel", null).show();
 	}
 	
+	//show an alertdialog suggesting if reconnect
+	void showAlertDialog(String message)
+	{
+		new AlertDialog.Builder(this)
+		.setIcon( android.R.drawable.ic_dialog_alert)
+		.setMessage(message)
+		.setNegativeButton("Cancel", null)
+		.setPositiveButton("Yes", new DialogInterface.OnClickListener() 
+		{
+            public void onClick(DialogInterface dialog, int id) 
+            {
+            	//cancel the connection and research
+            	if(isConnected)
+            	{
+            		connectedThread.cancel();
+            	}
+            	else 
+            	{
+					turnOnBT();
+				}
+            }
+		}).show();
+	}
+	
+	//Bluetooth
+	
+    private void connectionLost() {
+		// TODO Auto-generated method stub
+    	 mHandler.obtainMessage(CONNECTION_LOST).sendToTarget();
+	}
+    
+    private void connectFail() {
+		// TODO Auto-generated method stub
+    	mHandler.obtainMessage(CONNECTION_LOST).sendToTarget();
+	}
 	
 	private class ConnectThread extends Thread {
 
@@ -365,11 +422,14 @@ public class CalculationMain extends FragmentActivity{
                 Log.d(tag, "try0");
 	            // MY_UUID is the app's UUID string, also used by the server code
 	            tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-	        } catch (IOException e) { Log.d(tag, "catch0"); }
+	        } catch (IOException e) 
+	        { Log.d(tag, "catch0"); connectFail(); }
 	        mmSocket = tmp;
 	    }
 	 
-	    public void run() {
+
+
+		public void run() {
 	    	Log.d(tag, "run connect");
 	        // Cancel discovery because it will slow down the connection
 	        BTAdapter.cancelDiscovery();
@@ -383,11 +443,13 @@ public class CalculationMain extends FragmentActivity{
 	        } catch (IOException connectException) {
 	            // Unable to connect; close the socket and get out
 	        	Log.d(tag, "catch1");
+	        	connectFail();
 	            try {
 	                Log.d(tag, "try2");
+	                
 	                mmSocket.close();
 
-	            } catch (IOException closeException) { Log.d(tag, "catch2");}
+	            } catch (IOException closeException) { Log.d(tag, "catch2"); connectFail();}
 	            return;
 	        }
 	 
@@ -404,6 +466,8 @@ public class CalculationMain extends FragmentActivity{
 	        } catch (IOException e) { }
 	    }
 	}
+	
+
 	
 	private class ConnectedThread extends Thread {
 	    private final BluetoothSocket mmSocket;
@@ -434,22 +498,23 @@ public class CalculationMain extends FragmentActivity{
 	        // Keep listening to the InputStream until an exception occurs
 	        while (true) {
 	            try {
-	            	Log.d(tag, "try read");
 	                // Read from the InputStream
 	            	buffer = new byte[1024];
-	            	Log.d(tag, "try read1");
 	                bytes = mmInStream.read(buffer);
 	                // Send the obtained bytes to the UI activity
 	                
 	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
 	                        .sendToTarget();
-	            } catch (IOException e) { Log.d(tag, "read catch");
+	            } catch (IOException e) { 
+	            	if(!isAppFinish)
+	            		connectionLost();
 	                break;
 	            }
 	        }
 	    }
-	 
-	    /* Call this from the main activity to send data to the remote device */
+
+
+		/* Call this from the main activity to send data to the remote device */
 	    public void write(byte[] bytes) {
 	        try {
 	            mmOutStream.write(bytes);
@@ -458,8 +523,11 @@ public class CalculationMain extends FragmentActivity{
 	 
 	    /* Call this from the main activity to shutdown the connection */
 	    public void cancel() {
+	    	Log.d(tag, "asdfadfa");
 	        try {
 	            mmSocket.close();
+	            //
+	            isConnected = false;
 	        } catch (IOException e) { }
 	    }
 	}
