@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-import android.R.bool;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -19,7 +18,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.DialogFragment;
@@ -35,6 +33,7 @@ import android.widget.Toast;
 
 public class CalculationMain extends FragmentActivity{
 	//for debug
+	boolean D = true;
 	String tag = "bluetoothTest";
 	
 	//bluetooth
@@ -72,21 +71,20 @@ public class CalculationMain extends FragmentActivity{
     {
     	public void handleMessage(Message message)
     	{
-    		Log.d(tag, "handle message");
+    		if(D) Log.d(tag, "handle message");
     		super.handleMessage(message);
     		switch(message.what)
     		{
     		case SUCCESS_CONNECT:
-    			Log.d(tag, "HANDLE, start connect");
+    			if(D) Log.d(tag, "HANDLE, start connect");
     			connectedThread = new ConnectedThread((BluetoothSocket)message.obj);
     			String s = "successfully connected";
     			connectedThread.write(s.getBytes());
-
     			//dismiss the search list dialog
-    			bTListDialog.dismiss();
-    			Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_SHORT).show();
-    			isConnected = true;
+    			//Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_SHORT).show();
     			connectedThread.start();
+    	        if(!isConnected)	isConnected = true;
+    			bTListDialog.dismiss();
     			break;
     		case MESSAGE_READ:
     			byte[] readBuf = (byte[])message.obj;
@@ -99,9 +97,10 @@ public class CalculationMain extends FragmentActivity{
     			Log.d(tag, "HANDLE, connection lost");
     			isConnected = false;
     			showAlertDialog("Lost connection. Do you want to reconnect?");  
+    			break;
     		case CONNECT_FAIL: 
     			Log.d(tag, "HANDLE, connec fail");
-    			Toast.makeText(getApplicationContext(), "connect fail, try again or cancel", Toast.LENGTH_SHORT).show();
+    			Toast.makeText(getApplicationContext(), "connect fail, check if the port is open", Toast.LENGTH_SHORT).show();
     			break;
     		}
     	}
@@ -125,6 +124,7 @@ public class CalculationMain extends FragmentActivity{
     	{
     		pairedDevices.clear();
     		listAdapter.clear();
+    		devices.clear();
     		getPairedBluetooth();
     		startDiscovery();
     		
@@ -402,7 +402,7 @@ public class CalculationMain extends FragmentActivity{
     
     private void connectFail() {
 		// TODO Auto-generated method stub
-    	mHandler.obtainMessage(CONNECTION_LOST).sendToTarget();
+    	mHandler.obtainMessage(CONNECT_FAIL).sendToTarget();
 	}
 	
 	private class ConnectThread extends Thread {
@@ -411,7 +411,7 @@ public class CalculationMain extends FragmentActivity{
 	    private final BluetoothDevice mmDevice;
 	 
 	    public ConnectThread(BluetoothDevice device) {
-	    	Log.d(tag, "build connect");
+	    	if(D) Log.d(tag, "build connect");
 	        // Use a temporary object that is later assigned to mmSocket,
 	        // because mmSocket is final
 	        BluetoothSocket tmp = null;
@@ -419,15 +419,14 @@ public class CalculationMain extends FragmentActivity{
 	 
 	        // Get a BluetoothSocket to connect with the given BluetoothDevice
 	        try {
-                Log.d(tag, "try0");
 	            // MY_UUID is the app's UUID string, also used by the server code
 	            tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
 	        } catch (IOException e) 
-	        { Log.d(tag, "catch0"); connectFail(); }
+	        { 
+	        	if(D) Log.d(tag, "socket created failed"); 
+	        }
 	        mmSocket = tmp;
 	    }
-	 
-
 
 		public void run() {
 	    	Log.d(tag, "run connect");
@@ -437,24 +436,24 @@ public class CalculationMain extends FragmentActivity{
 	        try {
 	            // Connect the device through the socket. This will block
 	            // until it succeeds or throws an exception
-	            Log.d(tag, "try1");
 	            mmSocket.connect();
 
 	        } catch (IOException connectException) {
 	            // Unable to connect; close the socket and get out
-	        	Log.d(tag, "catch1");
+	        	if(D) Log.d(tag, "socket connect failed");
 	        	connectFail();
-	            try {
-	                Log.d(tag, "try2");
-	                
+	            try {	                
 	                mmSocket.close();
 
-	            } catch (IOException closeException) { Log.d(tag, "catch2"); connectFail();}
+	            } catch (IOException closeException) 
+	            { 
+	            	if(D) Log.d(tag, "socket close failed"); 
+	            	connectFail();
+	            }
 	            return;
 	        }
 	 
 	        // Do work to manage the connection (in a separate thread)
-	        Log.d(tag, "about to handle");
 	        mHandler.obtainMessage(SUCCESS_CONNECT, mmSocket).sendToTarget();
 	    }
 	    
@@ -482,10 +481,9 @@ public class CalculationMain extends FragmentActivity{
 	        // Get the input and output streams, using temp objects because
 	        // member streams are final
 	        try {
-	        	Log.d(tag, "try connected");
 	            tmpIn = socket.getInputStream();
 	            tmpOut = socket.getOutputStream();
-	        } catch (IOException e) { Log.d(tag, "catch connected"); }
+	        } catch (IOException e) { if(D) Log.d(tag, "tmp socket not connected"); }
 	 
 	        mmInStream = tmpIn;
 	        mmOutStream = tmpOut;
@@ -494,22 +492,26 @@ public class CalculationMain extends FragmentActivity{
 	    public void run() {
 	        byte[] buffer;  // buffer store for the stream
 	        int bytes; // bytes returned from read()
-	 
+	        if(D) Log.d(tag, "run connection"); 
+
 	        // Keep listening to the InputStream until an exception occurs
 	        while (true) {
 	            try {
 	                // Read from the InputStream
 	            	buffer = new byte[1024];
 	                bytes = mmInStream.read(buffer);
-	                // Send the obtained bytes to the UI activity
-	                
+	                // Send the obtained bytes to the UI activity	                
 	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
 	                        .sendToTarget();
 	            } catch (IOException e) { 
-	            	if(!isAppFinish)
+	            	if(D) Log.d(tag, "connection start failed"); 
+	            	if(!isAppFinish&&isConnected)
 	            		connectionLost();
+	            	else if(!isConnected)
+	            		connectFail();
 	                break;
-	            }
+	            } 
+	            
 	        }
 	    }
 
