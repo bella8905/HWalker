@@ -34,12 +34,12 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class CalculationMain extends FragmentActivity implements OnItemClickListener{
+public class CalculationMain extends FragmentActivity{
 	//for debug
 	String tag = "bluetoothTest";
 	
 	//bluetooth
-	ListView listView;
+	//ListView listView;
 	private BluetoothAdapter BTAdapter; 
 	protected int BT_ENABLE_RETURN = 2;
 	
@@ -62,6 +62,8 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
 	//test bluetooth
 	TextView tv_contentTime;
 	
+	AlertDialog bTListDialog;
+	
 	
     Handler mHandler = new Handler()
     {
@@ -72,12 +74,15 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
     		switch(message.what)
     		{
     		case SUCCESS_CONNECT:
-    			Log.d(tag, "start connect");
+    			//Log.d(tag, "start connect");
     			connectedThread = new ConnectedThread((BluetoothSocket)message.obj);
-    			//Toast.makeText(getApplicationContext(), "connected", 0).show();
     			String s = "successfully connected";
     			connectedThread.write(s.getBytes());
-    			Log.d(tag, "connected");
+    			//Log.d(tag, "connected");
+    			
+    			//dismiss the search list dialog
+    			bTListDialog.dismiss();
+    			Toast.makeText(getApplicationContext(), "connected", 0).show();
     			connectedThread.start();
     			break;
     		case MESSAGE_READ:
@@ -91,9 +96,6 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
     	}
     };
 	
-	/////////////////////
-//    static String[] items = {"aa", "bb", "cc"};
-//    static ListAdapter arrAdapter;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,22 +106,6 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
         
         initBluetoth();
         
-    	//if the device does not support Bluetooth, simply return.
-    	if (BTAdapter == null) 
-    	{
-    		showBTErrorDialog("No bluetooth");
-    	}
-    	else 
-    	{
-    		
-    		if (!BTAdapter.isEnabled()) 
-    		{ 
-    			turnOnBT();
-    			//Log.d("bluetoothTest", "3");
-    		}
-    		
-    		startBTSearch();
-		} 
     }
 
     private void startBTSearch() {
@@ -129,15 +115,17 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
 		listAdapter.clear();
 		getPairedBluetooth();
 		startDiscovery();
+		
+		showBTListDialog();
 	}
 
 	private void initBluetoth() {
 	// TODO Auto-generated method stub
     	//check bluetooth
-    	listView = (ListView)findViewById(R.id.listView_bluetooth);
-    	listView.setOnItemClickListener(this);
+    	//listView = (ListView)findViewById(R.id.listView_bluetooth);
+    	//listView.setOnItemClickListener(this);
+    	//listView.setAdapter(listAdapter);
     	listAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, 0);
-    	listView.setAdapter(listAdapter);
     	
     	BTAdapter = BluetoothAdapter.getDefaultAdapter();
     	pairedDevices = new ArrayList<String>();
@@ -218,7 +206,21 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
     //bluetooth
     public void startBluetooth(View view)
     {
- 	
+    	//if the device does not support Bluetooth, simply return.
+    	if (BTAdapter == null) 
+    	{
+    		showBTErrorDialog("No bluetooth");
+    	}
+    	else 
+    	{    		
+    		if (!BTAdapter.isEnabled()) 
+    		{ 
+    			turnOnBT();
+    			//Log.d("bluetoothTest", "3");
+    		}
+    		
+    		startBTSearch();
+		}
     }
     
         
@@ -319,27 +321,30 @@ public class CalculationMain extends FragmentActivity implements OnItemClickList
 		ft.commitAllowingStateLoss();
 //	    newFragment.show(ft, "dialog");
 	}
-
-	@Override
-	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-		// TODO Auto-generated method stub
-		
-		if(BTAdapter.isDiscovering())
-		{
-			BTAdapter.cancelDiscovery();
-		}
-		
-//		if(!listAdapter.getItem(arg2).contains("paired"))
-//		{
-			//Log.d(tag, "paired device is selected");
-			BluetoothDevice selectedDevice = devices.get(arg2);
-			connect = new ConnectThread(selectedDevice);
-			connect.start();
-//		}
-//		else 
-//		{
-//			//Toast.makeText(getApplicationContext(), "device is not paired", 0).show();
-//		}
+	
+	void showBTListDialog()
+	{
+		//list view dialog
+		bTListDialog = new AlertDialog.Builder(this).setTitle("Bluetooth devices")
+		.setIcon( android.R.drawable.ic_dialog_info)
+		.setSingleChoiceItems(listAdapter, 0, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int which) 
+			{
+				if(BTAdapter.isDiscovering())
+				{
+					BTAdapter.cancelDiscovery();
+				}
+				
+				//Log.d(tag, "paired device is selected");
+				BluetoothDevice selectedDevice = devices.get(which);
+				Toast.makeText(getApplicationContext(), selectedDevice.getName() + " is selected" , Toast.LENGTH_LONG).show();
+				connect = new ConnectThread(selectedDevice);
+				connect.start();
+	
+				//dialog.dismiss();
+				}
+			})
+		.setNegativeButton("Cancel", null).show();
 	}
 	
 	
