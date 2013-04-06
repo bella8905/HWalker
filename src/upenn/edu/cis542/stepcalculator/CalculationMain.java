@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
+import android.R.integer;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -18,6 +19,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.DialogFragment;
@@ -66,6 +68,23 @@ public class CalculationMain extends FragmentActivity{
 	TextView tv_contentTime;
 	
 	AlertDialog bTListDialog;
+	
+    //set time parameters
+	TimeThread timeThread;
+    private static final int msgKey1 = 4;
+    long sysTime,iniTime;
+    
+    //set arduino data parameters
+    private String stepStr;
+    private String speedStr;
+    private float distance;
+    private String latStr, lonStr;
+    private String xStr;
+    private String yStr;
+    private String zStr;
+    private float calory;
+    private int preSteps = 0;
+    TextView contentStep,contentSpeed, contentLat, contentLon, contentCal,contentDist, contentAccel;
 		
     Handler mHandler = new Handler()
     {
@@ -85,13 +104,95 @@ public class CalculationMain extends FragmentActivity{
     			connectedThread.start();
     	        if(!isConnected)	isConnected = true;
     			bTListDialog.dismiss();
+    			//start timer
+    	        //init time
+    			if(iniTime<1)
+    			{
+            	    iniTime = System.currentTimeMillis();
+        	        timeThread = new TimeThread();
+        	        timeThread.start();
+    			}
+
     			break;
     		case MESSAGE_READ:
-    			byte[] readBuf = (byte[])message.obj;
-    			String string = new String(readBuf);
+    			//read in data
+    			String str = (String)message.obj;
     			//Toast.makeText(getApplicationContext(), string, 0).show();
+    			Log.d(tag, "read message: "+str);
+    			int start = str.indexOf(' ');
+    			int end = str.indexOf(' ', start+1);
+    			stepStr = str.substring(start+1, end);
+    			
+    			int steps;
+    			try
+    			{
+    				 steps = Integer.parseInt(stepStr);
+    			}
+    			catch (NumberFormatException e) {
+					// TODO: handle exception
+    				Log.d(tag, "steps wrong");
+    				break;
+				}
+    			
+    			Log.d(tag, "steps " + steps + "; " + preSteps);
+    			if(steps<preSteps||(steps-preSteps)>20)
+    				break;
+    			preSteps = steps;
+    			
+    			contentStep.setText(stepStr);  
+    			
+     			
+    			//calculate calory and distance
+    			calory = 0.05f * steps;
+    			contentCal.setText(String.format("%.2f", calory));
+    			distance = 1.0f/2000.0f * steps;
+    			contentDist.setText(String.format("%.5f", distance));
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				xStr = str.substring(start+1, end);
+    			else {
+					break;
+				}
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				yStr = str.substring(start+1, end);
+    			else break;
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				zStr = str.substring(start+1, end);
+    			else break;
+    			
+    			contentAccel.setText(xStr + " " + yStr + " " + zStr);
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				latStr = str.substring(start+1, end);
+    			else break;
+    			contentLat.setText(latStr);
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				lonStr = str.substring(start+1, end);
+    			else break;
+    			contentLon.setText(lonStr);
+    			
+    			start = end;
+    			if(start<end)
+    				speedStr = str.substring(start+1);
+    			else break;
+    			contentSpeed.setText(speedStr);
+   
+    			
     			Log.d(tag, "HANDLE, read");
-    			tv_contentTime.setText(string);
+
     			break;
     		case CONNECTION_LOST: 
     			Log.d(tag, "HANDLE, connection lost");
@@ -102,6 +203,21 @@ public class CalculationMain extends FragmentActivity{
     			Log.d(tag, "HANDLE, connec fail");
     			Toast.makeText(getApplicationContext(), "connect fail, check if the port is open", Toast.LENGTH_SHORT).show();
     			break;
+			case msgKey1:
+				Log.d(tag, "HANDLE, timer");
+	             sysTime = System.currentTimeMillis() - iniTime;
+	
+	             sysTime/=1000;
+	             int hour = (int) (sysTime/3600);
+	             int min = (int)(sysTime - hour*3600)/60;
+	             int sec = (int)(sysTime%3600)%60;
+	             
+	             tv_contentTime.setText(hour+"'"+min+"''"+sec);
+	             break;
+	             
+			default:
+               break;
+    			
     		}
     	}
     };
@@ -113,7 +229,16 @@ public class CalculationMain extends FragmentActivity{
         
         tv_contentTime = (TextView)findViewById(R.id.content_time);
         
-        initBluetoth();        
+        initBluetoth();  
+        
+        //init android-arduino parameters
+        contentSpeed = (TextView)findViewById(R.id.content_speed);
+        contentCal = (TextView)findViewById(R.id.content_calory);
+        contentAccel = (TextView)findViewById(R.id.content_accel);
+        contentLat = (TextView)findViewById(R.id.content_latitute);
+        contentLon = (TextView)findViewById(R.id.content_lontitute);
+        contentStep = (TextView)findViewById(R.id.content_step);
+        contentDist = (TextView)findViewById(R.id.content_distance);
     }
 
     private void startBTSearch() {
@@ -215,6 +340,12 @@ public class CalculationMain extends FragmentActivity{
 			isAppFinish = true;
 			connectedThread.cancel();
 		}
+		
+		if(timeThread!=null)
+		{
+			timeThread.setContinue(false);
+		}
+		
 	}
     
 	@Override
@@ -269,7 +400,6 @@ public class CalculationMain extends FragmentActivity{
 		    }
 		}
 	}
-
     
     //after trying to open bluetooth
     //onActivityResult will be called before onResume, so we cannot show the dialog here
@@ -290,8 +420,6 @@ public class CalculationMain extends FragmentActivity{
     	
     }
 
-    
-    
 	public static class BTErrorDialogFragment extends DialogFragment {
 	    String m_message;
 
@@ -473,6 +601,8 @@ public class CalculationMain extends FragmentActivity{
 	    private final InputStream mmInStream;
 	    private final OutputStream mmOutStream;
 	 
+	    private String readMessage = "";
+	    
 	    public ConnectedThread(BluetoothSocket socket) {
 	        mmSocket = socket;
 	        InputStream tmpIn = null;
@@ -490,19 +620,45 @@ public class CalculationMain extends FragmentActivity{
 	    }
 	 
 	    public void run() {
-	        byte[] buffer;  // buffer store for the stream
+	    	byte[] buffer = new byte[256];  // buffer store for the stream
 	        int bytes; // bytes returned from read()
 	        if(D) Log.d(tag, "run connection"); 
 
 	        // Keep listening to the InputStream until an exception occurs
 	        while (true) {
-	            try {
+                try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	            try {	            	
+	            	Log.d(tag, "skfjksjfksjglajfgak");
 	                // Read from the InputStream
-	            	buffer = new byte[1024];
+	            	//buffer = new byte[1024];
 	                bytes = mmInStream.read(buffer);
-	                // Send the obtained bytes to the UI activity	                
-	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-	                        .sendToTarget();
+	                // Send the obtained bytes to the UI activity
+	                Log.d(tag, "new string "+new String(buffer));
+	                readMessage += new String(buffer);
+	                int start, end;
+	                if(((start = (readMessage.indexOf('$')))!=-1))
+	                {
+	                	Log.d(tag, "start" + start);
+	                	if((end = (readMessage.indexOf('@', start+1)))!=-1)
+	                	{
+	                		Log.d(tag, "end" + end);
+	                		String str = readMessage.substring(start+1, end);
+	                		if(readMessage.length() == end+1)
+	                			readMessage = "";
+	                		else {
+		                		readMessage = readMessage.substring(end+1);
+							}
+
+	    	                Log.d(tag, str);
+	    	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, str)
+	    	                        .sendToTarget();
+	                	}
+	                }
 	            } catch (IOException e) { 
 	            	if(D) Log.d(tag, "connection start failed"); 
 	            	if(!isAppFinish&&isConnected)
@@ -533,4 +689,39 @@ public class CalculationMain extends FragmentActivity{
 	        } catch (IOException e) { }
 	    }
 	}
+	
+	//set time thread
+	 public class TimeThread extends Thread 
+	 {
+		 private boolean shouldContinue = true;
+	    @Override
+	    public void run () 
+	    {
+	    	do 
+	    	{
+	    		try 
+			    {
+			        Thread.sleep(1000);
+			        Message msg = new Message();
+			        msg.what = msgKey1;
+			        mHandler.sendMessage(msg);
+			    }
+			    catch (InterruptedException e) 
+			    {
+			        e.printStackTrace();
+			    }
+	        } while(shouldContinue);
+	     }
+	    
+		 public void setContinue(boolean t_shouldContinue) { shouldContinue = t_shouldContinue; }
+	 }
+	 
+	 public void shareIt(View view){
+	    	Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);  
+	    	sharingIntent.setType("text/plain"); 
+	    	String shareBody = "Here is the share content body";  
+	    	sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Subject Here");  
+	    	sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);  
+	    	startActivity(Intent.createChooser(sharingIntent,"Share via"));
+	    }
 }
