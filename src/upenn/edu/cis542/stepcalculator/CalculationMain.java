@@ -234,7 +234,7 @@ public class CalculationMain extends FragmentActivity{
         //init android-arduino parameters
         contentSpeed = (TextView)findViewById(R.id.content_speed);
         contentCal = (TextView)findViewById(R.id.content_calory);
-        contentAccel = (TextView)findViewById(R.id.content_accel);
+        //contentAccel = (TextView)findViewById(R.id.content_accel);
         contentLat = (TextView)findViewById(R.id.content_latitute);
         contentLon = (TextView)findViewById(R.id.content_lontitute);
         contentStep = (TextView)findViewById(R.id.content_step);

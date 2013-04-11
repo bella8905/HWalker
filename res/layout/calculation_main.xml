@@ -16,11 +16,7 @@
 
 	   <TextView
 	       android:id="@+id/title.time"
-<<<<<<< HEAD
 	       android:layout_width="wrap_content"
-=======
-	       android:layout_width="140dp"
->>>>>>> 04_04
 	       android:layout_height="wrap_content"
 	       android:text="TIME"
 	       android:textColor="#FFFFFF"
@@ -50,7 +46,7 @@
             android:shadowDx="0"
             android:shadowDy="0"
             android:shadowRadius="10"
-            android:text="0.00"
+            android:text="3.10"
             android:textColor="#FFFFFF"
             android:textSize="120sp" />
 
@@ -94,31 +90,19 @@
            android:layout_gravity="top|center|fill"
            android:shadowColor="#ffffff"
            android:text="CALORY"
+           android:textStyle="bold|italic"
            android:textColor="#f4c47a"
-<<<<<<< HEAD
            android:textSize="30sp" />
-=======
-           android:textSize="30sp"
-           android:textStyle="bold|italic" />
->>>>>>> 04_04
 
        <TextView
            android:id="@+id/content.calory"
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="105"
            android:textColor="#f4c47a"
            android:textStyle="bold|italic"
            android:textSize="30sp" />
-=======
-           android:text="0"
-           android:textColor="#ffffff"
-           android:textSize="30sp"
-           android:textStyle="bold|italic" />
-
->>>>>>> 04_04
        <TextView
            android:id="@+id/content.kj"
            android:layout_width="96dp"
@@ -128,48 +112,6 @@
            android:text=" KJ"
            android:textColor="#FFFFFF"
            android:textSize="30sp" />
-
-    </LinearLayout>
-    
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:layout_marginLeft="50dp"
-        android:layout_marginTop="20dp" >
-	    
-       <TextView
-<<<<<<< HEAD
-           android:id="@+id/title.speed"
-           android:layout_width="105dp"
-           android:layout_height="wrap_content"
-           android:layout_gravity="top|center|fill"
-           android:text="SPEED"
-           android:textColor="#f4c47a"
-            android:textStyle="bold|italic"
-           android:textSize="30sp" />
-
-=======
-           android:id="@+id/title.accel"
-           android:layout_width="146dp"
-           android:layout_height="wrap_content"
-           android:layout_gravity="top|center|fill"
-           android:shadowColor="#ffffff"
-           android:text="ACCEL"
-           android:textColor="#f4c47a"
-           android:textSize="30sp"
-           android:textStyle="bold|italic" />
-
-       <TextView
-           android:id="@+id/content.accel"
-           android:layout_width="wrap_content"
-           android:layout_height="wrap_content"
-           android:layout_gravity="top|center|fill"
-           android:text="0 0 0"
-           android:textColor="#ffffff"
-           android:textStyle="bold|italic"
-           android:textSize="30sp" />
-
 
     </LinearLayout>
         
@@ -190,13 +132,12 @@
             android:textStyle="bold|italic"
            android:textSize="30sp" />
 
->>>>>>> 04_04
         <TextView
            android:id="@+id/content.speed"
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-           android:text="0"
+           android:text="30"
            android:textColor="#FFFFFF"
            android:textSize="30sp" />
 
@@ -234,11 +175,7 @@
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="30"
-=======
-           android:text="0"
->>>>>>> 04_04
            android:textColor="#FFFFFF"
            android:textSize="30sp" />
 
@@ -256,11 +193,7 @@
            android:layout_width="164dp"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="LATITUTE"
-=======
-           android:text="LATITUDE"
->>>>>>> 04_04
            android:textColor="#f4c47a"
            android:textSize="30sp"
            android:textStyle="bold|italic" />
@@ -270,11 +203,7 @@
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="lat 30"
-=======
-           android:text="0"
->>>>>>> 04_04
            android:textColor="#FFFFFF"
            android:textSize="30sp" />
 
@@ -291,11 +220,7 @@
            android:layout_width="182dp"
            android:layout_height="68dp"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="LONTITUTE"
-=======
-           android:text="LONGITUDE"
->>>>>>> 04_04
            android:textColor="#f4c47a"
            android:textSize="30sp"
            android:textStyle="bold|italic" />
@@ -305,11 +230,7 @@
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_gravity="top|center|fill"
-<<<<<<< HEAD
            android:text="lon 30"
-=======
-           android:text="0"
->>>>>>> 04_04
            android:textColor="#FFFFFF"
            android:textSize="30sp" />
 
@@ -332,8 +253,7 @@
                  android:layout_height="wrap_content"
                  android:layout_marginBottom="5dp"
                  android:layout_marginLeft="40dp"
-                 android:background="@drawable/songplay1"
-                 android:onClick="shareIt" />
+                 android:background="@drawable/songplay1" />
 
              <Button
                  android:id="@+id/end"
